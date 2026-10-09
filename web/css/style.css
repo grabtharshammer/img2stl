@@ -156,6 +156,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
 
 .reset { display: inline-flex; align-items: center; gap: 6px; flex: none; border: 1px solid var(--line); background: var(--field); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
 .reset:hover { border-color: var(--accent); }
+.top-actions { display: flex; gap: 8px; flex: none; }
+.reset.done { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 440px) { .reset .wide { display: none; } }
 .reset svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .viewer-status { display: none; }
 

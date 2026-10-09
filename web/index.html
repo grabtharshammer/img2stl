@@ -24,10 +24,16 @@
       <span class="name">img2stl</span>
       <span class="tag">Image &rarr; 3D-printable clay stamp</span>
     </div>
-    <button class="reset" id="reset" type="button" title="Put every setting back to its default (keeps your image)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4"/></svg>
-      Reset settings
-    </button>
+    <div class="top-actions">
+      <button class="reset" id="copy-link" type="button" title="Copy a link to these settings, to share or save. The image isn't included; the address bar always holds the same link">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+        <span>Copy link</span>
+      </button>
+      <button class="reset" id="reset" type="button" title="Put every setting back to its default (keeps your image)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4"/></svg>
+        Reset<span class="wide">&nbsp;settings</span>
+      </button>
+    </div>
   </header>
 
   <main class="layout">

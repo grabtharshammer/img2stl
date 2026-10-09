@@ -41,3 +41,16 @@ outlines dominate). A laptop is ~4x faster.
 - Air vents in the plate for cutter stamps (clay suction).
 - 3D preview of the impression in clay.
 - Text tool (opentype.js like gpx2stl's label) for name stamps.
+
+## Settings in the URL (web/js/urlstate.js)
+App-agnostic, meant to be copied unchanged into gpx2stl. The app passes a schema (number with
+min/max, bool, enum) built from SLIDERS plus the seg buttons' `data-v` values (so choices can't
+drift), its defaults, and keys to omit (`threshold` while automatic). `save()` calls `writeUrl`
+on every change; only non-default settings are written (`?size=80&cutterOn=1`), via
+`history.replaceState` batched to ~150 ms (Safari throws after 100 calls in 30 s). On load a URL
+with any valid setting wins over localStorage and keys it leaves out are DEFAULTS (so a shared
+link reproduces exactly); junk and out-of-range values are dropped or clamped. `shareUrl()`
+flushes and returns the link for the Copy link button; `copyText` falls back to execCommand.
+The image is never in the URL.
+Back-porting to gpx2stl: build its schema the same way; keep per-route state (map area override,
+label text/position, trim) out of it unless that's wanted, since it only makes sense for one GPX.

@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { writeStl } from "./core/stl.js";
 import { luminance, otsu, blur, inkBounds } from "./core/trace.js";
 import { DEFAULTS, CUTTER_DEFAULTS } from "./core/stamp.js";
+import { readUrl, writeUrl, shareUrl, copyText } from "./urlstate.js";
 
 const $ = (id) => document.getElementById(id);
 const STORE = "img2stl-settings-v1";
@@ -44,9 +45,25 @@ const UI_DEFAULTS = {
   cell: 0.1, taper: DEFAULTS.taper,
 };
 
+// what may come in through the URL; choices are read from the buttons, so they can't drift apart
+const choices = (id, parse = (v) => v) => [...$(id).querySelectorAll("button")].map((b) => parse(b.dataset.v));
+const URL_SCHEMA = {
+  ...Object.fromEntries(Object.values(SLIDERS).flat().map((d) => [d.key, { type: "number", min: d.min, max: d.max * 4 }])),
+  ink: { type: "enum", values: choices("ink") }, thresholdAuto: { type: "bool" }, mirror: { type: "bool" },
+  raise: { type: "enum", values: choices("raise") }, shape: { type: "enum", values: choices("shape") },
+  cutterOn: { type: "bool" }, cell: { type: "enum", values: choices("detail", parseFloat) },
+};
+
+// a link's settings win over the ones saved in this browser; keys the link leaves out are defaults
 let settings = { ...UI_DEFAULTS };
-try { Object.assign(settings, JSON.parse(localStorage.getItem(STORE)) ?? {}); } catch {}
-const save = () => { try { localStorage.setItem(STORE, JSON.stringify(settings)); } catch {} };
+const fromUrl = readUrl(URL_SCHEMA);
+if (fromUrl) Object.assign(settings, fromUrl);
+else try { Object.assign(settings, JSON.parse(localStorage.getItem(STORE)) ?? {}); } catch {}
+const save = () => {
+  try { localStorage.setItem(STORE, JSON.stringify(settings)); } catch {}
+  // a hand-set threshold only means something when it isn't automatic
+  writeUrl(URL_SCHEMA, settings, UI_DEFAULTS, settings.thresholdAuto ? ["threshold"] : []);
+};
 
 const engineOpts = () => ({
   size: settings.size, depth: settings.depth, base: settings.base, margin: settings.margin, shape: settings.shape,
@@ -140,6 +157,14 @@ function syncControls() {
   for (const [k, set] of Object.entries(inputs)) set(settings[k]);
   syncs.forEach((s) => s());
 }
+$("copy-link").addEventListener("click", async () => {
+  const btn = $("copy-link"), label = btn.querySelector("span"), url = shareUrl();
+  if (!(await copyText(url))) { prompt("Copy this link:", url); return; }
+  label.textContent = "Link copied";
+  btn.classList.add("done");
+  clearTimeout(btn.timer);
+  btn.timer = setTimeout(() => { label.textContent = "Copy link"; btn.classList.remove("done"); }, 1800);
+});
 $("reset").addEventListener("click", () => {
   settings = { ...UI_DEFAULTS };
   syncControls();

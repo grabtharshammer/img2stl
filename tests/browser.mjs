@@ -189,7 +189,56 @@ async function touch() {
   await ctx.close();
 }
 
+// settings in the URL: a link restores them (over saved ones), the address bar follows every
+// change, and the Copy link button copies it
+async function links() {
+  const ctx = await browser.createBrowserContext();
+  const page = await ctx.newPage();
+  await page.setViewport({ width: 1200, height: 900 });
+  page.on("pageerror", (e) => fail(`links page error: ${e.message}`));
+  page.on("dialog", (d) => { fail(`links: unexpected dialog "${d.message()}"`); d.dismiss(); });
+  await ctx.overridePermissions(new URL(url).origin, ["clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
+  await page.goto(url, { waitUntil: "networkidle0" });
+  await page.evaluate(() => localStorage.setItem("img2stl-settings-v1", JSON.stringify({ size: 120, depth: 3 })));
+  const search = async () => { await sleep(350); return page.evaluate(() => location.search); };
+  const expectSearch = async (want, what) => {
+    const got = await search();
+    if (got !== want) fail(`links: ${what}: address bar ?${got.slice(1)} (expected ${want || "nothing"})`);
+    else console.log(`links: ${what}: ${got || "(no query)"}`);
+  };
+  const controls = () => page.evaluate(() => [document.getElementById("r-size").value, document.getElementById("r-depth").value,
+    document.querySelector('#shape [aria-checked="true"]')?.dataset.v, document.getElementById("cutter-on").checked,
+    document.getElementById("r-cutterHeight").value].join());
+
+  await page.goto(`${url}?size=80&shape=circle&cutterOn=1&cutterHeight=8&bogus=1&depth=lots&raise=sideways`, { waitUntil: "networkidle0" });
+  let c = await controls();
+  if (c !== "80,1.5,circle,true,8") fail(`links: opened link gave controls ${c} (expected 80,1.5,circle,true,8: saved depth 3 must not leak in)`);
+  await expectSearch("?size=80&cutterHeight=8&shape=circle&cutterOn=1", "opened a link, junk dropped");
+
+  await page.$eval("#r-depth", (r) => { r.value = 2.5; r.dispatchEvent(new Event("input")); });
+  await page.click("#mirror");
+  await expectSearch("?size=80&depth=2.5&cutterHeight=8&mirror=0&shape=circle&cutterOn=1", "after moving a slider and a checkbox");
+  await page.$eval("#r-threshold", (r) => { r.value = 40; r.dispatchEvent(new Event("input")); });
+  if (!/threshold=40&.*thresholdAuto=0/.test(await search())) fail(`links: hand-set threshold missing: ${await search()}`);
+
+  await page.click("#copy-link");
+  await sleep(300);
+  const [clip, href, label] = await page.evaluate(async () => [await navigator.clipboard.readText(), location.href,
+    document.querySelector("#copy-link span").textContent]);
+  if (clip !== href || !clip.includes("depth=2.5")) fail(`links: clipboard "${clip}" vs address bar "${href}"`);
+  else if (label !== "Link copied") fail(`links: button says "${label}" after copying`);
+  else console.log(`links: copied ${clip}`);
+
+  await page.reload({ waitUntil: "networkidle0" });
+  c = await controls();
+  if (c !== "80,2.5,circle,true,8") fail(`links: after reload controls ${c}`);
+  await page.click("#reset");
+  await expectSearch("", "after reset");
+  await ctx.close();
+}
+
 try {
+  await links();
   await touch();
   await run("desktop", { width: 1400, height: 900 });
   await run("mobile-dark", { width: 390, height: 844, dark: true });

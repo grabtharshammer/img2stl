@@ -22,6 +22,9 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 - **Cookie cutter**: a wall round the edge that reaches past the relief and narrows to a sharper
   cutting edge. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
 - A 3D preview, a 2D preview of how the impression will look, and a watertight binary **STL**.
+- **Shareable settings**: the address bar always holds a link to the current settings (only the
+  ones changed from the defaults), so it can be bookmarked or sent; **Copy link** copies it. The image
+  isn't part of the link. Opening a link uses its settings instead of the ones saved in your browser.
 
 ## Settings
 
@@ -62,6 +65,6 @@ app warns about them, and *Line boldness* fixes most.
 - `web/js/core/trace.js`: luminance, Otsu threshold, blur, marching squares (from gpx2stl).
 - `web/js/core/stamp.js`: the geometry, with manifold-3d (WASM) loaded from jsDelivr.
 - `web/js/app.js`: UI, image rasterising, 2D/3D previews. `web/js/worker.js` runs the build.
-- Tests (Node 20 + Chromium): `cd tests && npm install && node stamp.mjs && node browser.mjs /usr/bin/chromium`.
+- Tests (Node 20 + Chromium): `cd tests && npm install && node stamp.mjs && node urlstate.mjs && node browser.mjs /usr/bin/chromium`.
 
 `.github/workflows/pages.yml` deploys `web/` to GitHub Pages on pushes to `main`.
