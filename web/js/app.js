@@ -273,6 +273,15 @@ $("threshold-note").addEventListener("click", (e) => {
 function showError(msg) {
   $("error").hidden = !msg;
   $("error").textContent = msg ?? "";
+  viewerStatus();
+}
+
+// on phones the panel's status line is often scrolled away, so the viewer repeats it
+function viewerStatus() {
+  const el = $("viewer-status"), err = $("error").hidden ? "" : $("error").textContent, text = err || $("status").textContent;
+  el.hidden = !text || text === "Model is up to date.";
+  el.textContent = text;
+  el.classList.toggle("bad", Boolean(err));
 }
 
 // ------------------------------------------------------------------ building (automatic)
@@ -340,6 +349,7 @@ function setProgress(stage, frac) {
 function setStatus(text) {
   if (text === undefined) text = model && builtFor === buildKey() ? "Model is up to date." : "";
   $("status").textContent = text;
+  viewerStatus();
 }
 
 // ------------------------------------------------------------------ 3D viewer

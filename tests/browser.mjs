@@ -79,6 +79,16 @@ async function run(name, { width, height, dark }) {
   let stats = await settle("leaf");
   if (!/\d+ × 60 × 4\.5 mm/.test(stats)) fail(`${name}: leaf stamp should be 60 mm long and 4.5 mm tall: ${stats}`);
   await page.screenshot({ path: join(shots, `${name}-leaf.png`) });
+  if (width <= 860) {
+    // phones: the viewer stays pinned to the bottom of the screen while the settings scroll
+    for (const y of [0, 500, 1000]) {
+      await page.evaluate((y) => window.scrollTo(0, y), y);
+      await sleep(200);
+      const r = await page.$eval("#viewer", (v) => { const b = v.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, vh: innerHeight }; });
+      if (Math.abs(r.bottom - r.vh) > 1 || r.top < r.vh * 0.4) fail(`${name}: viewer not pinned at scroll ${y}: ${JSON.stringify(r)}`);
+    }
+    await page.screenshot({ path: join(shots, `${name}-sticky.png`) });
+  }
 
   await click("#cutter-on");
   stats = await settle("leaf + cutter");
@@ -124,6 +134,14 @@ async function run(name, { width, height, dark }) {
   const err = await page.$eval("#error", (e) => (e.hidden ? null : e.textContent));
   if (!err) fail(`${name}: expected a "no room" error`);
   else console.log(`${name}: no-room message: ${err}`);
+
+  // reset: every setting back to its default, the image stays
+  await click("#reset");
+  stats = await settle("after reset");
+  if (!/60 × \d+ × 4\.5 mm/.test(stats)) fail(`${name}: reset should give the 60 mm default: ${stats}`);
+  const back = await page.evaluate(() => [document.getElementById("r-size").value, document.getElementById("r-margin").value,
+    document.querySelector('#ink [aria-checked="true"]')?.dataset.v, document.querySelector('#shape [aria-checked="true"]')?.dataset.v]);
+  if (back.join() !== "60,3,dark,outline") fail(`${name}: controls after reset: ${back}`);
   await ctx.close();
 }
 

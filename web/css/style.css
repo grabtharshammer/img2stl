@@ -49,7 +49,7 @@ svg { display: block; }
 .plate { fill: var(--moss); }
 .relief { fill: var(--accent); }
 
-.topbar { padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand svg { width: 28px; height: 28px; }
 .brand .name { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
@@ -98,7 +98,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
 
 .advanced summary { cursor: pointer; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
 .advanced[open] summary { margin-bottom: 12px; }
-.advanced .link { margin-top: 14px; font-size: 14px; }
 
 .actions { display: grid; gap: 8px; position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 12px; margin-top: auto; box-shadow: 0 -10px 10px -6px var(--bg); }
 .status { color: var(--muted); font-size: 13px; min-height: 1.45em; }
@@ -146,7 +145,30 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
   .actions { position: static; }
   .brand .tag { display: none; }
   .topbar, .foot { padding-left: 16px; padding-right: 16px; }
-  .inset canvas { max-width: 110px; max-height: 110px; }
+  .inset { left: 8px; top: 8px; padding: 5px; }
+  .inset canvas { max-width: 84px; max-height: 84px; }
+  .viewer.has-model .inset figcaption { display: none; }
   .legend { display: none; }
   .result { grid-template-columns: 1fr; }
+}
+
+.reset { display: inline-flex; align-items: center; gap: 6px; flex: none; border: 1px solid var(--line); background: var(--field); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+.reset:hover { border-color: var(--accent); }
+.reset svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.viewer-status { display: none; }
+
+/* phones: the viewer sticks to the bottom of the screen, so changes show while the settings scroll above it */
+@media (max-width: 860px) {
+  .stage { display: contents; }
+  .viewer { position: sticky; bottom: 0; z-index: 10; height: min(40svh, 80vw); min-height: 220px; aspect-ratio: auto;
+            box-shadow: 0 -6px 16px rgb(0 0 0 / .18); }
+  .viewer-status { display: block; position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); max-width: calc(100% - 24px);
+                   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: 12px;
+                   color: var(--muted); text-align: center; box-shadow: 0 1px 4px rgb(0 0 0 / .12); }
+  .viewer-status[hidden] { display: none; }
+  .viewer-status.bad { color: var(--danger); }
+  .viewer:not(.has-source) { position: relative; height: auto; min-height: 180px; box-shadow: none; }
+  .viewer:not(.has-model) .inset canvas { max-width: 70vw; max-height: calc(min(40svh, 80vw) - 70px); }
+  .viewer-tools button { width: 30px; height: 30px; }
+  .reset { padding: 5px 10px; font-size: 13px; }
 }
