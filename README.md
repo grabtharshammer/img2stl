@@ -3,6 +3,8 @@
 Turn a high-contrast image or SVG into a 3D-printable stamp for pressing designs into clay, with
 an optional cookie-cutter edge that cuts the shape out in the same press.
 
+**Use it here: <https://grabtharshammer.github.io/img2stl/>**. Nothing to install.
+
 Everything runs in your browser; your image is never uploaded anywhere. It's a static site in
 `web/` with nothing to install: serve the folder (or open it from GitHub Pages) and drop in an image.
 
