@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 250">
+  <!-- a leaf with its veins left white: the leaf is pressed in, the veins stay as ridges -->
+  <path d="M100 10 C152 52 186 112 162 172 C147 208 122 226 100 230 C78 226 53 208 38 172 C14 112 48 52 100 10 Z" fill="#1d1d1b"/>
+  <path d="M96 228 Q94 238 88 246" stroke="#1d1d1b" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <g stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none">
+    <path d="M100 34 V214"/>
+    <path d="M100 74 Q114 62 126 54 M100 74 Q86 62 74 54"/>
+    <path d="M100 104 Q122 88 144 80 M100 104 Q78 88 56 80"/>
+    <path d="M100 136 Q126 120 154 114 M100 136 Q74 120 46 114"/>
+    <path d="M100 168 Q124 154 148 152 M100 168 Q76 154 52 152"/>
+    <path d="M100 196 Q116 188 130 188 M100 196 Q84 188 70 188"/>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+{
+  "name": "img2stl-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node stamp.mjs"
+  },
+  "devDependencies": {
+    "manifold-3d": "3.5.4",
+    "puppeteer-core": "25.12.0"
+  }
+}

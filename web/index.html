@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>img2stl: image to clay stamp</title>
+  <meta name="description" content="Turn a high-contrast image or SVG into a 3D-printable stamp for pressing designs into clay, with an optional cookie-cutter edge. Runs entirely in your browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='17' width='26' height='6' rx='2' fill='%23596b5b'/%3E%3Cpath d='M8 17v-3h4v3m8 0v-3h4v3' fill='%23b4532a'/%3E%3Crect x='11' y='4' width='10' height='9' rx='3' fill='%23596b5b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="17" width="26" height="6" rx="2" class="plate"/><path d="M8 17v-3h4v3m8 0v-3h4v3" class="relief"/><rect x="11" y="4" width="10" height="9" rx="3" class="plate"/></svg>
+      <span class="name">img2stl</span>
+      <span class="tag">Image &rarr; 3D-printable clay stamp</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <section class="card">
+        <h2>1 &middot; Image</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*,.svg" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          <span><strong>Drop an image</strong> or click to browse</span>
+          <small>SVG, PNG, JPG&hellip; Bold black and white works best. You can also paste one.</small>
+        </label>
+        <div class="source-info" id="source-info" hidden>
+          <div class="source-name" id="source-name"></div>
+          <div class="source-meta" id="source-meta"></div>
+          <button class="link" id="change" type="button">Choose another image</button>
+        </div>
+        <p class="hint" id="example-hint">No image handy? <button class="link" id="example" type="button">Try the leaf</button></p>
+      </section>
+
+      <section class="card">
+        <h2>2 &middot; Design</h2>
+        <div class="field">
+          <span class="label">The design is the</span>
+          <div class="seg" id="ink" role="radiogroup" aria-label="The design is the">
+            <button type="button" data-v="dark">Dark parts</button>
+            <button type="button" data-v="light">Light parts</button>
+          </div>
+        </div>
+        <div id="design-controls"></div>
+        <p class="area-note" id="threshold-note"></p>
+        <label class="check spaced"><input type="checkbox" id="mirror"> Mirror, so it reads the right way round in the clay</label>
+      </section>
+
+      <section class="card">
+        <h2>3 &middot; Stamp</h2>
+        <div class="field">
+          <span class="label">In the clay</span>
+          <div class="seg" id="raise" role="radiogroup" aria-label="In the clay">
+            <button type="button" data-v="design" title="The design is raised on the stamp and presses into the clay">Design pressed in</button>
+            <button type="button" data-v="background" title="The background is raised, so the design stands up in the clay">Design stands out</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Shape</span>
+          <div class="seg" id="shape" role="radiogroup" aria-label="Shape">
+            <button type="button" data-v="outline" title="Follows the outline of the design">Outline</button>
+            <button type="button" data-v="rect">Rectangle</button>
+            <button type="button" data-v="circle">Circle</button>
+          </div>
+        </div>
+        <div id="stamp-controls"></div>
+        <div id="corner-controls"></div>
+      </section>
+
+      <section class="card">
+        <h2>4 &middot; Cookie cutter</h2>
+        <label class="check"><input type="checkbox" id="cutter-on"> Add a cutting edge around the stamp</label>
+        <div id="cutter-body" hidden>
+          <p class="area-note">A wall round the edge that reaches past the design, so one press cuts the shape out of a clay slab
+            and imprints it. The wall narrows to a sharper edge at the top.</p>
+          <div id="cutter-controls"></div>
+        </div>
+      </section>
+
+      <details class="card advanced">
+        <summary>Advanced</summary>
+        <div class="field">
+          <span class="label">Detail</span>
+          <div class="seg" id="detail" role="radiogroup" aria-label="Detail">
+            <button type="button" data-v="0.2">Draft</button>
+            <button type="button" data-v="0.1">Standard</button>
+            <button type="button" data-v="0.05">Fine</button>
+          </div>
+          <span class="help">How finely the image is traced: 0.2, 0.1 or 0.05 mm</span>
+        </div>
+        <div id="advanced-controls"></div>
+        <button class="link" id="reset" type="button">Reset all settings</button>
+      </details>
+
+      <div class="actions">
+        <div class="status" id="status"></div>
+        <div class="progress" id="progress" hidden><div class="bar"><span id="progress-bar"></span></div></div>
+        <div class="error" id="error" role="alert" hidden></div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="viewer" id="viewer">
+        <canvas id="canvas"></canvas>
+        <div class="no-gl" id="no-gl" hidden>3D preview isn't available in this browser.<br>You can still download the STL.</div>
+        <figure class="inset" id="inset" hidden>
+          <canvas id="design"></canvas>
+          <figcaption>As it will look in the clay</figcaption>
+        </figure>
+        <div class="empty" id="empty">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="34" width="52" height="12" rx="4" class="plate"/><path d="M16 34v-6h8v6m16 0v-6h8v6" class="relief"/><rect x="22" y="8" width="20" height="18" rx="6" class="plate"/></svg>
+          <p>Load an image to get started.</p>
+        </div>
+        <div class="viewer-tools">
+          <button type="button" id="reset-view" title="Reset view" aria-label="Reset view">
+            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4"/></svg>
+          </button>
+        </div>
+        <div class="legend">The printed stamp, face up as it prints &middot; drag to rotate, scroll to zoom</div>
+      </div>
+      <div class="result" id="result" hidden>
+        <dl class="stats" id="stats"></dl>
+        <button class="primary download" id="download" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4M4 19h16"/></svg>
+          Download STL <span id="download-size"></span>
+        </button>
+        <ul class="notes" id="notes" hidden></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Runs entirely in your browser; your image never leaves your computer.
+    Print tip: face up as it is, no supports, 0.12&nbsp;mm layers for fine detail. Dust the stamp with cornstarch so it lets go of the clay.
+  </footer>
+</body>
+</html>
