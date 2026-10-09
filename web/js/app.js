@@ -55,6 +55,43 @@ const engineOpts = () => ({
   cutter: settings.cutterOn ? { height: settings.cutterHeight, wall: settings.cutterWall, tip: settings.cutterTip } : null,
 });
 
+// Touch screens: a native range input takes any touch that lands on it, so scrolling the page
+// past a slider nudges it, and a tap on the track jumps the value. There, the input ignores
+// pointers (CSS, .touch) and its wrapper (touch-action: pan-y, so vertical swipes scroll) moves
+// it only when a drag starts on the knob and goes sideways, by how far the finger moves.
+const TOUCH = matchMedia("(pointer: coarse)").matches;
+document.documentElement.classList.toggle("touch", TOUCH);
+const KNOB_REACH = 28;   // px either side of the knob's centre that count as grabbing it
+function touchSlider(range) {
+  if (!TOUCH) return;
+  const wrap = range.parentElement;
+  let drag = null;   // { id, x, y, v, active }
+  const knobX = () => {
+    const r = range.getBoundingClientRect(), knob = Math.min(r.height, 28);
+    return r.left + knob / 2 + ((range.value - range.min) / (range.max - range.min)) * (r.width - knob);
+  };
+  wrap.addEventListener("pointerdown", (e) => {
+    if (Math.abs(e.clientX - knobX()) > KNOB_REACH) return;   // taps on the track do nothing
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, v: +range.value, active: false };
+  });
+  wrap.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.active) {
+      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }   // a scroll
+      if (Math.abs(dx) < 6) return;
+      drag.active = true;
+      wrap.setPointerCapture(e.pointerId);
+    }
+    const r = range.getBoundingClientRect(), min = +range.min, max = +range.max, step = +range.step;
+    let v = drag.v + (dx / Math.max(1, r.width - Math.min(r.height, 28))) * (max - min);
+    v = Math.min(max, Math.max(min, Math.round((v - min) / step) * step + min));
+    v = +v.toFixed(6);
+    if (v !== +range.value) { range.value = v; range.dispatchEvent(new Event("input")); }
+  });
+  for (const t of ["pointerup", "pointercancel"]) wrap.addEventListener(t, () => { drag = null; });
+}
+
 const inputs = {};
 for (const [container, defs] of Object.entries(SLIDERS)) {
   for (const d of defs) {
@@ -62,7 +99,7 @@ for (const [container, defs] of Object.entries(SLIDERS)) {
     el.className = "field";
     el.innerHTML = `
       <label class="label" for="r-${d.key}">${d.label}</label>
-      <div class="slide"><input type="range" id="r-${d.key}" min="${d.min}" max="${d.max}" step="${d.step}">
+      <div class="slide"><span class="range"><input type="range" id="r-${d.key}" min="${d.min}" max="${d.max}" step="${d.step}"></span>
         <span class="val"><input type="number" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label}">${d.unit}</span></div>
       ${d.help ? `<span class="help">${d.help}</span>` : ""}`;
     const [range, num] = el.querySelectorAll("input");
@@ -78,6 +115,7 @@ for (const [container, defs] of Object.entries(SLIDERS)) {
     range.addEventListener("input", () => set(range.value, range));
     num.addEventListener("change", () => set(Math.min(d.max * 4, Math.max(d.min, num.value)), num));
     inputs[d.key] = (v) => { num.value = v; range.value = v; };
+    touchSlider(range);
     $(container).append(el);
   }
 }

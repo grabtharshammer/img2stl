@@ -145,7 +145,52 @@ async function run(name, { width, height, dark }) {
   await ctx.close();
 }
 
+// touch screens: sliders move only when their knob is dragged sideways
+async function touch() {
+  const ctx = await browser.createBrowserContext();
+  const page = await ctx.newPage();
+  await page.setViewport({ width: 390, height: 844, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+  page.on("pageerror", (e) => fail(`touch page error: ${e.message}`));
+  await page.goto(url, { waitUntil: "networkidle0" });
+  if (!(await page.evaluate(() => document.documentElement.classList.contains("touch")))) fail("touch: no .touch class (pointer: coarse not seen)");
+  const t = page.touchscreen;
+  const geo = () => page.$eval("#r-depth", (r) => {
+    const b = r.getBoundingClientRect(), knob = Math.min(b.height, 28);
+    return { left: b.left, width: b.width, y: b.top + b.height / 2, knob: b.left + knob / 2 + ((r.value - r.min) / (r.max - r.min)) * (b.width - knob), value: +r.value };
+  });
+  await page.$eval("#r-depth", (r) => r.scrollIntoView({ block: "center" }));
+  await sleep(300);
+  let g = await geo();
+  const v0 = g.value;
+  // a tap on the track, well away from the knob
+  await t.tap(g.left + g.width - 10, g.y);
+  await sleep(200);
+  if ((await geo()).value !== v0) fail(`touch: a tap on the track moved the slider to ${(await geo()).value}`);
+  // a vertical swipe that starts on the knob scrolls instead
+  const y0 = await page.evaluate(() => scrollY);
+  await t.touchStart(g.knob, g.y);
+  for (let k = 1; k <= 10; k++) await t.touchMove(g.knob + k * 0.6, g.y - k * 20);
+  await t.touchEnd();
+  await sleep(500);
+  const y1 = await page.evaluate(() => scrollY);
+  if ((await geo()).value !== v0) fail(`touch: a vertical swipe moved the slider to ${(await geo()).value}`);
+  console.log(`touch: vertical swipe over a slider scrolled ${Math.round(y1 - y0)} px, slider unchanged`);
+  // a sideways drag from the knob moves it, by the distance dragged (no jump)
+  await page.$eval("#r-depth", (r) => r.scrollIntoView({ block: "center" }));
+  await sleep(300);
+  g = await geo();
+  await t.touchStart(g.knob, g.y);
+  for (let k = 1; k <= 10; k++) await t.touchMove(g.knob + k * 6, g.y + (k % 2));
+  await t.touchEnd();
+  await sleep(200);
+  const v1 = (await geo()).value, expect = v0 + (60 / (g.width - Math.min(28, 28))) * (5 - 0.4);
+  if (!(v1 > v0 + 0.3 && Math.abs(v1 - expect) < 0.3)) fail(`touch: dragging the knob 60 px gave ${v0} -> ${v1} (expected about ${expect.toFixed(1)})`);
+  else console.log(`touch: dragging the knob 60 px moved depth ${v0} -> ${v1}`);
+  await ctx.close();
+}
+
 try {
+  await touch();
   await run("desktop", { width: 1400, height: 900 });
   await run("mobile-dark", { width: 390, height: 844, dark: true });
 } catch (e) { fail(e.message); }
