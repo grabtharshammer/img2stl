@@ -92,13 +92,13 @@ async function run(name, { width, height, dark }) {
 
   await click("#cutter-on");
   stats = await settle("leaf + cutter");
-  if (!/× 7.0 mm/.test(stats)) fail(`${name}: cutter should make it 3 + 4 = 7 mm tall: ${stats}`);
+  if (!/× 6.5 mm/.test(stats)) fail(`${name}: cutter should make it 3 + 1.5 + 2 = 6.5 mm tall: ${stats}`);
   await page.screenshot({ path: join(shots, `${name}-cutter.png`) });
 
   // the cutter along the leaf's own outline: no border, so the leaf is 60 mm less the two walls
   await click('#cutter-along [data-v="design"]');
   stats = await settle("leaf + cutter along the design");
-  if (!/× 7.0 mm/.test(stats)) fail(`${name}: cutter along the design should be 7 mm tall: ${stats}`);
+  if (!/× 6.5 mm/.test(stats)) fail(`${name}: cutter along the design should be 6.5 mm tall: ${stats}`);
   if (!(await page.$eval("#shape-field", (e) => e.hidden))) fail(`${name}: shape should be hidden when cutting along the design`);
   if (!/cutterAlong=design/.test(await page.evaluate(() => location.search))) fail(`${name}: cutterAlong not in the URL`);
   await page.screenshot({ path: join(shots, `${name}-along.png`) });

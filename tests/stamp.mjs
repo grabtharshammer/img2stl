@@ -73,20 +73,23 @@ const circ = build({ shape: "circle", size: 50 }, "circle");
 check(near(circ.stats.width, 50, 0.1) && near(circ.stats.depth, 50, 0.1), "circle: 50 mm across");
 
 const cut = build({ cutter: { height: 8, wall: 1.6, tip: 0.8 } }, "cutter");
-check(near(cut.stats.height, 11), "cutter: wall reaches 3 + 8 mm");
+check(near(cut.stats.height, 12.5), "cutter: wall reaches 3 + 1.5 + 8 mm");
 check(near(Math.max(cut.stats.width, cut.stats.depth), 60), "cutter: still 60 mm overall");
 build({ cutter: { height: 8, wall: 1.6, tip: 1.6 }, shape: "rect" }, "cutter, square edge, rect");
-// the cutting edge is tip thick all the way up: everything above the plate sits wall - tip inside the plate's edge
+// the cutting edge is tip thick above the relief (everything there sits wall - tip inside the plate's
+// edge), and widens over the impression depth
 const edgeOn = build({ cutter: { height: 5, wall: 1.5, tip: 0.6 }, shape: "rect", size: 50 }, "cutter, straight thin edge, rect");
 const widthAbove = (m, z) => {
   let x0 = Infinity, x1 = -Infinity;
   for (let i = 0; i < m.positions.length; i += 3) if (m.positions[i + 2] > z) { x0 = Math.min(x0, m.positions[i]); x1 = Math.max(x1, m.positions[i]); }
   return x1 - x0;
 };
-check(near(widthAbove(edgeOn, 3.01), 50 - 2 * 0.9) && near(widthAbove(edgeOn, 7.9), 50 - 2 * 0.9),
-      "straight edge: 0.9 mm in from the plate's edge just above the plate and at the top");
-const low = build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter lower than relief");
-check(near(low.stats.height, 6) && low.stats.notes.some((n) => /before the cutting edge/.test(n)), "cutter lower than relief: 3 + 3 mm tall, with a note");
+check(near(widthAbove(edgeOn, 4.51), 50 - 2 * 0.9) && near(widthAbove(edgeOn, 9.4), 50 - 2 * 0.9),
+      "straight edge: 0.9 mm in from the plate's edge from the relief top up");
+check(widthAbove(edgeOn, 3.01) > widthAbove(edgeOn, 3.8) && widthAbove(edgeOn, 3.8) > widthAbove(edgeOn, 4.51),
+      "straight edge: the wall widens beside the relief towards the plate");
+const low = build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter above a deep relief");
+check(near(low.stats.height, 8), "cutter above a deep relief: 3 + 3 + 2 mm tall");
 build({ cutter: { height: 0.3, wall: 1.5, tip: 0.4 } }, "cutter 0.3 mm");
 build({ cutter: { height: 0, wall: 0.8, tip: 0.8, along: "design" } }, "cutter 0 mm along the design");
 
@@ -101,6 +104,18 @@ build({ cutter: along, raise: "background" }, "along the design, one piece, back
 build({ cutter: { ...along, tip: 1.6 }, taper: 0, shape: "circle", margin: 10 }, "along the design, square edge, no taper (shape ignored)");
 const one = build({ cutter: along }, "along the design, one piece", disc);
 check(!one.stats.notes.some((n) => /own cutting edge/.test(n)), "along the design, one piece: one edge");
+
+// open back and a ledge: the ring, its dot and the bar are loose, so bars hold them
+const opened = { height: 2, wall: 1.5, tip: 0.8, ledge: 1.5, open: true };
+const ob = build({ cutter: opened }, "open back, ledge");
+check(near(Math.max(ob.stats.width, ob.stats.depth), 60), "open back, ledge: still 60 mm overall");
+check(ob.stats.notes.some((n) => /across the back hold/.test(n)), "open back: bars hold the loose details");
+check(ob.stats.volume < build({ cutter: { ...opened, open: false } }, "closed back, ledge").stats.volume, "open back: less material than closed");
+build({ cutter: opened, raise: "background" }, "open back, background raised");
+build({ cutter: { ...opened, along: "design" } }, "open back along the design");
+build({ cutter: { ...opened, along: "design" }, raise: "background" }, "open back along the design, background raised");
+build({ cutter: { ...opened, along: "design" } }, "open back along the design, one piece", disc);
+build({ cutter: { ...opened, tip: 1.5, ledge: 0 }, taper: 0, shape: "circle" }, "open back, square edge, no ledge, no taper");
 
 const bg = build({ raise: "background" }, "background raised");
 check(bg.stats.volume > base.stats.volume, "background raised: more material than design raised");

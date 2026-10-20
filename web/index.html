@@ -94,7 +94,7 @@
         <label class="check"><input type="checkbox" id="cutter-on"> Add a cutting edge around the stamp</label>
         <div id="cutter-body" hidden>
           <p class="area-note">A wall round the edge that reaches past the design, so one press cuts the shape out of a clay slab
-            and imprints it. Above the plate the wall is a thin, straight cutting edge.</p>
+            and imprints it. Above the relief the wall is a thin, straight cutting edge; it widens to the full wall at the plate.</p>
           <div class="field">
             <span class="label">Cuts along</span>
             <div class="seg" id="cutter-along" role="radiogroup" aria-label="Cuts along">
@@ -102,6 +102,7 @@
               <button type="button" data-v="design" title="The wall's inside follows the design's outer outline, so the piece cut out is the design's shape and everything inside it is impressed">The design's outline</button>
             </div>
           </div>
+          <label class="check spaced"><input type="checkbox" id="cutter-open"> Open back: no plate behind the design; bars at the back hold any details that don't reach the cutter</label>
           <div id="cutter-controls"></div>
         </div>
       </section>

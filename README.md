@@ -19,8 +19,10 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
   background is raised, so the design stands up in the clay).
 - Stamp shape: follows the design's **outline**, or a **rectangle** or **circle**.
 - **Impression depth** and **base thickness**, and a slight **taper** on the relief so it lets go of the clay.
-- **Cookie cutter**: a wall round the edge, a thin straight cutting edge for its whole height above
-  the plate, widening to a sturdier wall where it meets the plate. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
+- **Cookie cutter**: a wall round the edge, a thin straight cutting edge above the relief that
+  widens over the impression depth to a sturdier wall at the plate, standing on a flat **ledge**.
+  With an **open back** there's no plate behind the design: details that don't reach the cutter are
+  held by bars at the back. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
   It runs round the stamp's edge, or **along the design's outline**: then the piece cut out is the
   design's own shape and everything inside the outline is impressed.
 - A 3D preview, a 2D preview of how the impression will look, and a watertight binary **STL**.
@@ -49,9 +51,11 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 | Corner radius | 3 mm | Rectangle only |
 | **Cookie cutter** | off | |
 | Cuts along | The stamp's edge | Or *the design's outline*: the wall's inner face is the design's outer edge (holes filled), with no border. Shape and border don't apply; separate pieces each get their own wall, joined by the plate |
-| Cutter height | 4 mm | Above the base, 0–5 mm in 0.1 mm steps. Below the impression depth, the relief reaches the clay first (the app says so) |
-| Wall thickness | 1.5 mm | 0.8–1.5 mm, where the wall meets the plate |
-| Cutting edge | 0.8 mm | The wall's thickness for its whole height above the plate, straight on both sides; the outside steps out to the wall thickness at the plate |
+| Cutter height | 2 mm | Above the relief, 0–5 mm in 0.1 mm steps: the edge stands impression depth + this above the base, which is how deep it cuts |
+| Open back | on | No plate behind the design: the impression details stand on the bed, and any that don't reach the cutter are held by 1.2 mm bars at the back that run straight across from wall to wall, as thick as the base (so they stay clear of the clay) |
+| Ledge | 1.5 mm | A flat foot round the outside of the wall, as thick as the base |
+| Wall thickness | 1.5 mm | 0.8–1.5 mm, at the plate; the outside narrows from this to the cutting edge over the impression depth |
+| Cutting edge | 0.9 mm | The wall's thickness for the cutter height above the relief, straight on both sides. With a 0.4 mm nozzle and Bambu Studio's Classic wall generator, thinner edges can be skipped; Arachne prints them |
 | **Advanced** | | |
 | Detail | Standard | Tracing resolution: 0.2, 0.1 or 0.05 mm per pixel |
 | Relief taper | 0.2 mm | How far the relief's sides lean in over its height |

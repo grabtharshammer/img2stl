@@ -29,9 +29,10 @@ const SLIDERS = {
     { key: "cornerRadius", label: "Corner radius", unit: "mm", min: 0, max: 30, step: 0.5 },
   ],
   "cutter-controls": [
-    { key: "cutterHeight", label: "Cutter height", unit: "mm", min: 0, max: 5, step: 0.1, help: "Above the base. Match your clay slab's thickness, so the edge cuts through as the stamp touches down" },
-    { key: "cutterWall", label: "Wall thickness", unit: "mm", min: 0.8, max: 1.5, step: 0.1, help: "Where the wall meets the plate" },
-    { key: "cutterTip", label: "Cutting edge", unit: "mm", min: 0.4, max: 1.5, step: 0.1, help: "The wall's thickness for its whole height above the plate, straight on both sides for a clean cut; it widens to the wall thickness at the plate" },
+    { key: "cutterHeight", label: "Cutter height", unit: "mm", min: 0, max: 5, step: 0.1, help: "How far the edge stands above the relief. Impression depth + this is how deep it cuts: match it to your clay slab's thickness" },
+    { key: "cutterLedge", label: "Ledge", unit: "mm", min: 0, max: 5, step: 0.1, help: "A flat foot round the outside of the wall, as thick as the base, so the cutter stands steady and presses evenly" },
+    { key: "cutterWall", label: "Wall thickness", unit: "mm", min: 0.8, max: 1.5, step: 0.1, help: "At the plate. The wall narrows from this to the cutting edge over the impression depth" },
+    { key: "cutterTip", label: "Cutting edge", unit: "mm", min: 0.4, max: 1.5, step: 0.1, help: "The wall's thickness for the cutter height above the relief, straight on both sides for a clean cut. With a 0.4 mm nozzle keep it at 0.9 or more, or switch your slicer's wall generator to Arachne: thinner edges can be skipped" },
   ],
   "advanced-controls": [
     { key: "taper", label: "Relief taper", unit: "mm", min: 0, max: 1, step: 0.05, help: "How far the relief's sides lean in, so the stamp lets go of the clay cleanly" },
@@ -42,7 +43,7 @@ const UI_DEFAULTS = {
   mirror: DEFAULTS.mirror, raise: DEFAULTS.raise, shape: DEFAULTS.shape, size: DEFAULTS.size, depth: DEFAULTS.depth,
   base: DEFAULTS.base, margin: DEFAULTS.margin, cornerRadius: DEFAULTS.cornerRadius,
   cutterOn: false, cutterHeight: CUTTER_DEFAULTS.height, cutterWall: CUTTER_DEFAULTS.wall, cutterTip: CUTTER_DEFAULTS.tip,
-  cutterAlong: CUTTER_DEFAULTS.along, cell: 0.1, taper: DEFAULTS.taper,
+  cutterAlong: CUTTER_DEFAULTS.along, cutterLedge: CUTTER_DEFAULTS.ledge, cutterOpen: CUTTER_DEFAULTS.open, cell: 0.1, taper: DEFAULTS.taper,
 };
 
 // what may come in through the URL; choices are read from the buttons, so they can't drift apart
@@ -51,7 +52,7 @@ const URL_SCHEMA = {
   ...Object.fromEntries(Object.values(SLIDERS).flat().map((d) => [d.key, { type: "number", min: d.min, max: d.max * 4 }])),
   ink: { type: "enum", values: choices("ink") }, thresholdAuto: { type: "bool" }, mirror: { type: "bool" },
   raise: { type: "enum", values: choices("raise") }, shape: { type: "enum", values: choices("shape") },
-  cutterOn: { type: "bool" }, cutterAlong: { type: "enum", values: choices("cutter-along") }, cell: { type: "enum", values: choices("detail", parseFloat) },
+  cutterOn: { type: "bool" }, cutterOpen: { type: "bool" }, cutterAlong: { type: "enum", values: choices("cutter-along") }, cell: { type: "enum", values: choices("detail", parseFloat) },
 };
 
 // a link's settings win over the ones saved in this browser; keys the link leaves out are defaults
@@ -69,7 +70,8 @@ const engineOpts = () => ({
   size: settings.size, depth: settings.depth, base: settings.base, margin: settings.margin, shape: settings.shape,
   cornerRadius: settings.cornerRadius, mirror: settings.mirror, raise: settings.raise, boldness: settings.boldness,
   despeckle: settings.despeckle, taper: settings.taper,
-  cutter: settings.cutterOn ? { height: settings.cutterHeight, wall: settings.cutterWall, tip: settings.cutterTip, along: settings.cutterAlong } : null,
+  cutter: settings.cutterOn ? { height: settings.cutterHeight, wall: settings.cutterWall, tip: settings.cutterTip, along: settings.cutterAlong,
+                                ledge: settings.cutterLedge, open: settings.cutterOpen } : null,
 });
 // the cutter follows the design's outline: shape and border don't apply, and the outside is cut away
 const alongDesign = () => settings.cutterOn && settings.cutterAlong === "design";
@@ -154,7 +156,7 @@ function bindCheck(id, key) {
   return () => { $(id).checked = settings[key]; };
 }
 const syncs = [bindSeg("ink", "ink"), bindSeg("raise", "raise"), bindSeg("shape", "shape"), bindSeg("detail", "cell", parseFloat),
-               bindSeg("cutter-along", "cutterAlong"), bindCheck("mirror", "mirror"), bindCheck("cutter-on", "cutterOn")];
+               bindSeg("cutter-along", "cutterAlong"), bindCheck("mirror", "mirror"), bindCheck("cutter-on", "cutterOn"), bindCheck("cutter-open", "cutterOpen")];
 
 function syncControls() {
   for (const [k, set] of Object.entries(inputs)) set(settings[k]);
@@ -275,7 +277,7 @@ const threshold = () => (settings.thresholdAuto && preview ? preview.auto : sett
 // mm across the design's longest side, as the stamp will be built (the engine works it out exactly)
 function designLong() {
   const bw = bounds.x1 - bounds.x0 + 1, bh = bounds.y1 - bounds.y0 + 1;
-  let L = settings.size - 2 * ((alongDesign() ? 0 : settings.margin) + (settings.cutterOn ? settings.cutterWall : 0) + settings.boldness);
+  let L = settings.size - 2 * ((alongDesign() ? 0 : settings.margin) + (settings.cutterOn ? settings.cutterWall + settings.cutterLedge : 0) + settings.boldness);
   if (settings.shape === "circle" && !alongDesign()) L *= Math.max(bw, bh) / Math.hypot(bw, bh);
   return L;
 }
@@ -312,19 +314,48 @@ function drawPreview() {
   ctx.putImageData(img, 0, 0);
 }
 
-// background pixels connected to the crop's border: what a cutter along the design cuts away
+// what a cutter along the design cuts away: the background connected to the crop's border and,
+// when the design's edge is a drawn line round most of it, that line too (as the engine does)
 function outside(ink, w, h) {
-  const out = new Uint8Array(w * h), stack = [];
-  const push = (i) => { if (!ink[i] && !out[i]) { out[i] = 1; stack.push(i); } };
-  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
-  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
-  while (stack.length) {
-    const i = stack.pop(), x = i % w;
-    if (x > 0) push(i - 1);
-    if (x < w - 1) push(i + 1);
-    if (i >= w) push(i - w);
-    if (i < w * (h - 1)) push(i + w);
+  const out = new Uint8Array(w * h);   // 1: outside, 2: the outer line
+  const flood = (seeds, want, mark) => {
+    const stack = [];
+    const push = (i) => { if (ink[i] === want && !out[i]) { out[i] = mark; stack.push(i); } };
+    seeds.forEach(push);
+    while (stack.length) {
+      const i = stack.pop(), x = i % w;
+      if (x > 0) push(i - 1);
+      if (x < w - 1) push(i + 1);
+      if (i >= w) push(i - w);
+      if (i < w * (h - 1)) push(i + w);
+    }
+  };
+  const border = [];
+  for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) border.push(y * w, y * w + w - 1);
+  flood(border, 0, 1);
+  // the outer line: design pixels within about a line width of the outside (lines that join it,
+  // like a door drawn against it, stay); the width is the design's area over half its edge
+  let area = 0, edge = 0, ring = [];
+  for (let i = 0; i < out.length; i++) {
+    if (!ink[i]) continue;
+    area++;
+    const x = i % w, n = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w];
+    if (n.some((j) => j >= 0 && j < out.length && !ink[j])) edge++;
+    if (n.some((j) => out[j] === 1)) { out[i] = 2; ring.push(i); }
   }
+  for (let d = 1; d < Math.round((2 * area) / Math.max(1, edge)); d++) {
+    const next = [];
+    for (const i of ring) {
+      const x = i % w;
+      for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w])
+        if (j >= 0 && j < out.length && ink[j] && !out[j]) { out[j] = 2; next.push(j); }
+    }
+    ring = next;
+  }
+  let rest = 0, line = 0;
+  for (const v of out) if (!v) rest++; else if (v === 2) line++;
+  if (rest <= 0.5 * (rest + line)) for (let i = 0; i < out.length; i++) if (out[i] === 2) out[i] = 0;
   return out;
 }
 
@@ -460,6 +491,14 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x6b6050, 1.6));
 const sun = new THREE.DirectionalLight(0xffffff, 2.2);
 sun.position.set(-1, 1.2, 1.4);
 scene.add(sun);
+// a 250 mm print bed with a 1 cm grid under the model, to judge its size by; just below z = 0 so
+// the model's bottom doesn't flicker against it, and one-sided so the model shows from below
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(250, 250), new THREE.MeshBasicMaterial({ color: 0x3a3a3a }));
+ground.position.z = -0.2;
+const grid = new THREE.GridHelper(240, 24, 0x5c5c5c, 0x5c5c5c);   // lines on the centre, 5 mm border
+grid.rotation.x = Math.PI / 2;
+grid.position.z = -0.1;
+scene.add(ground, grid);
 let mesh = null, framedFor = null;
 
 const dark = matchMedia("(prefers-color-scheme: dark)");
@@ -529,7 +568,7 @@ function showModel(m) {
     ["Design", `${s.design.width.toFixed(0)} × ${s.design.depth.toFixed(0)} mm`],
     ["Impression", mm(s.reliefTop - s.base)],
   ];
-  if (s.cutter) stats.push(["Cutter", `${mm(s.top - s.base)} above the base`]);
+  if (s.cutter) stats.push(["Cutter", `${mm(s.top - s.reliefTop)} above the relief`]);
   stats.push(["Volume", `${s.volume.toFixed(1)} cm³`], ["Triangles", s.triangles.toLocaleString()]);
   $("stats").innerHTML = stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
   $("download-size").textContent = `(${fmtMB(84 + 50 * s.triangles)})`;

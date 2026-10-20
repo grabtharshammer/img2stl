@@ -27,10 +27,30 @@ Node 20; `~/img2stl-test/repo/tests/node_modules` is a symlink to the gpx2stl te
   of one block, keep every cutting tool reaching past what it cuts, offset/raise tops by 0.1*k.
 - Relief taper: TAPER_STEPS (4) stacked extrusions, each stands on the bed; design mode shrinks
   the design, background mode widens the grooves.
-- Cutter: `tip` thick for its whole height above the plate, both faces vertical (user wants a
-  straight cut); the outside steps out to `wall` at the plate top (a shoulder at z = base).
-  Height 0–5 mm in the UI (engine floor 0.1); height <= depth is allowed, with a note. Wall 0.8–1.5 mm.
-  The multi-piece join plate's top is base - 0.01 so it doesn't lie on that shoulder.
+- Cutter: `tip` thick from the relief top up, both faces vertical (user wants a straight cut);
+  over the impression depth the outside widens in ~0.15 mm steps (2–12) to `wall` at the plate.
+  The inside is always vertical.
+  Height is above the relief top (top = base + depth + height), 0–5 mm in the UI, engine floor
+  0.1 so the wall and relief tops never coincide. Wall 0.8–1.5 mm.
+  The multi-piece join plate's top is base - 0.01 so it doesn't lie on the wall's foot.
+- Ledge (`cutter.ledge`, default 1.5): the block is rim grown by the ledge (simplified 0.001, same
+  float32 reason as the rim), cut back to the rim above the base. Included in the fit's `pad`
+  (circle radius is size/2 - ledge; rect/outline grow by padIn = margin + wall).
+- Open back (`cutter.open`, default on): the hole cut goes through the bed. Any cutter now builds
+  from z = -1 and is trimmed at z = 0 (raised steps bottom at -0.5 - 0.1k, bars at -0.95). `foot`
+  = the raised parts' bottom region; pieces of it not overlapping rim - hole are loose, and get
+  BAR (1.2 mm) bars from z -0.95 to base, wall to wall for strength: a strip through a loose
+  piece's area centroid (always crosses it), clipped to hole + 0.5 (so 0.5 mm into the wall), the
+  stretch containing the centroid; of 24 directions the one hitting most loose pieces, then the
+  shortest. Repeat until none are loose. Trash is freed via a Set (some calls return kept objects).
+- Cutting edge default 0.9: with a 0.4 nozzle, Bambu's Classic wall generator needs ~0.82 mm for a
+  closed band's two walls and drops 0.8 entirely (user hit this). Arachne prints thinner.
+- Preview ground: 250 mm dark plane at z -0.2, 1 cm GridHelper (240/24, lines through the origin)
+  at z -0.1, so the model's bottom doesn't z-fight it.
+- Drawn outlines along the design (`lines`): hole = filled piece moved in by the average line
+  width (2 * stroke area / stroke edge length), when the open space is > half the piece. A raised
+  background there is built like the design (round(hole, 0.05(k+1)) - grown lines kept 0.1 mm
+  inside the hole), since it reaches the wall.
 - Outline shape fills holes; if the grown design is still in pieces, it uses their convex hull and says so.
 - Cutter along the design (`cutter.along: "design"`): hole = design with holes filled, rim = hole
   grown by the wall (simplified 0.001 mm: offsets of jagged corners left points a hair apart that
