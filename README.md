@@ -49,9 +49,9 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 | Corner radius | 3 mm | Rectangle only |
 | **Cookie cutter** | off | |
 | Cuts along | The stamp's edge | Or *the design's outline*: the wall's inner face is the design's outer edge (holes filled), with no border. Shape and border don't apply; separate pieces each get their own wall, joined by the plate |
-| Cutter height | 6 mm | Above the base; at least the impression depth + 1 mm |
-| Wall thickness | 1.6 mm | |
-| Cutting edge | 0.8 mm | The wall narrows to this over its top 3 mm, on the outside; the inside stays vertical |
+| Cutter height | 4 mm | Above the base, 0–5 mm in 0.1 mm steps. Below the impression depth, the relief reaches the clay first (the app says so) |
+| Wall thickness | 1.5 mm | 0.8–1.5 mm |
+| Cutting edge | 0.8 mm | The wall narrows to this over its top 3 mm (all but the bottom 0.2 mm of a lower cutter), on the outside; the inside stays vertical |
 | **Advanced** | | |
 | Detail | Standard | Tracing resolution: 0.2, 0.1 or 0.05 mm per pixel |
 | Relief taper | 0.2 mm | How far the relief's sides lean in over its height |

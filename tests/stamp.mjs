@@ -76,7 +76,10 @@ const cut = build({ cutter: { height: 8, wall: 1.6, tip: 0.8 } }, "cutter");
 check(near(cut.stats.height, 11), "cutter: wall reaches 3 + 8 mm");
 check(near(Math.max(cut.stats.width, cut.stats.depth), 60), "cutter: still 60 mm overall");
 build({ cutter: { height: 8, wall: 1.6, tip: 1.6 }, shape: "rect" }, "cutter, square edge, rect");
-build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter lower than relief (clamped)");
+const low = build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter lower than relief");
+check(near(low.stats.height, 6) && low.stats.notes.some((n) => /before the cutting edge/.test(n)), "cutter lower than relief: 3 + 3 mm tall, with a note");
+build({ cutter: { height: 0.3, wall: 1.5, tip: 0.4 } }, "cutter 0.3 mm");
+build({ cutter: { height: 0, wall: 0.8, tip: 0.8, along: "design" } }, "cutter 0 mm along the design");
 
 // cutting along the design: the ring and the bar are separate pieces, so two cutting edges on one plate
 const along = { height: 6, wall: 1.6, tip: 0.8, along: "design" };

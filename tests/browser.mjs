@@ -92,13 +92,13 @@ async function run(name, { width, height, dark }) {
 
   await click("#cutter-on");
   stats = await settle("leaf + cutter");
-  if (!/× 9\.0 mm/.test(stats)) fail(`${name}: cutter should make it 3 + 6 = 9 mm tall: ${stats}`);
+  if (!/× 7.0 mm/.test(stats)) fail(`${name}: cutter should make it 3 + 4 = 7 mm tall: ${stats}`);
   await page.screenshot({ path: join(shots, `${name}-cutter.png`) });
 
   // the cutter along the leaf's own outline: no border, so the leaf is 60 mm less the two walls
   await click('#cutter-along [data-v="design"]');
   stats = await settle("leaf + cutter along the design");
-  if (!/× 9\.0 mm/.test(stats)) fail(`${name}: cutter along the design should be 9 mm tall: ${stats}`);
+  if (!/× 7.0 mm/.test(stats)) fail(`${name}: cutter along the design should be 7 mm tall: ${stats}`);
   if (!(await page.$eval("#shape-field", (e) => e.hidden))) fail(`${name}: shape should be hidden when cutting along the design`);
   if (!/cutterAlong=design/.test(await page.evaluate(() => location.search))) fail(`${name}: cutterAlong not in the URL`);
   await page.screenshot({ path: join(shots, `${name}-along.png`) });
@@ -219,14 +219,14 @@ async function links() {
     document.querySelector('#shape [aria-checked="true"]')?.dataset.v, document.getElementById("cutter-on").checked,
     document.getElementById("r-cutterHeight").value].join());
 
-  await page.goto(`${url}?size=80&shape=circle&cutterOn=1&cutterHeight=8&bogus=1&depth=lots&raise=sideways`, { waitUntil: "networkidle0" });
+  await page.goto(`${url}?size=80&shape=circle&cutterOn=1&cutterHeight=4.5&bogus=1&depth=lots&raise=sideways`, { waitUntil: "networkidle0" });
   let c = await controls();
-  if (c !== "80,1.5,circle,true,8") fail(`links: opened link gave controls ${c} (expected 80,1.5,circle,true,8: saved depth 3 must not leak in)`);
-  await expectSearch("?size=80&cutterHeight=8&shape=circle&cutterOn=1", "opened a link, junk dropped");
+  if (c !== "80,1.5,circle,true,4.5") fail(`links: opened link gave controls ${c} (expected 80,1.5,circle,true,4.5: saved depth 3 must not leak in)`);
+  await expectSearch("?size=80&cutterHeight=4.5&shape=circle&cutterOn=1", "opened a link, junk dropped");
 
   await page.$eval("#r-depth", (r) => { r.value = 2.5; r.dispatchEvent(new Event("input")); });
   await page.click("#mirror");
-  await expectSearch("?size=80&depth=2.5&cutterHeight=8&mirror=0&shape=circle&cutterOn=1", "after moving a slider and a checkbox");
+  await expectSearch("?size=80&depth=2.5&cutterHeight=4.5&mirror=0&shape=circle&cutterOn=1", "after moving a slider and a checkbox");
   await page.$eval("#r-threshold", (r) => { r.value = 40; r.dispatchEvent(new Event("input")); });
   if (!/threshold=40&.*thresholdAuto=0/.test(await search())) fail(`links: hand-set threshold missing: ${await search()}`);
 
@@ -240,7 +240,7 @@ async function links() {
 
   await page.reload({ waitUntil: "networkidle0" });
   c = await controls();
-  if (c !== "80,2.5,circle,true,8") fail(`links: after reload controls ${c}`);
+  if (c !== "80,2.5,circle,true,4.5") fail(`links: after reload controls ${c}`);
   await page.click("#reset");
   await expectSearch("", "after reset");
   await ctx.close();

@@ -20,7 +20,7 @@ export const DEFAULTS = {
 };
 // along: "stamp" runs the wall round the stamp's shape; "design" puts its inner face on the
 // design's outer outline, so the cut piece is the design's silhouette (shape and margin are ignored)
-export const CUTTER_DEFAULTS = { height: 6, wall: 1.6, tip: 0.8, along: "stamp" };
+export const CUTTER_DEFAULTS = { height: 4, wall: 1.5, tip: 0.8, along: "stamp" };
 
 const TAPER_STEPS = 4, BLADE_STEPS = 6, BLADE_LENGTH = 3;   // mm of wall that narrows to the tip
 const MIN_FEATURE = 0.4;                                     // mm; about one nozzle line
@@ -142,9 +142,11 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
     const band = (k) => o.base + (o.depth * k) / steps;             // bottom of taper step k
     let top = reliefTop, body;
     if (o.cutter) {
-      const height = Math.max(o.cutter.height, o.depth + 1);   // the edge must reach past the relief
+      const height = Math.max(o.cutter.height, 0.1);            // a wall flush with the plate is no wall
       const tip = Math.min(o.cutter.tip, wall);
-      const blade = tip < wall ? Math.min(BLADE_LENGTH, height - o.depth - 0.5) : 0;
+      const blade = tip < wall ? Math.min(BLADE_LENGTH, height - 0.2) : 0;   // stops short of the plate
+      if (height <= o.depth)
+        notes.push("The relief stands as tall as the cutter or taller, so it reaches the clay before the cutting edge does.");
       top = o.base + height;
       // plate and wall in one piece: a block with the face hollowed out above the plate. The inner
       // face stays vertical, so the cut piece gets clean straight sides; the outside narrows in

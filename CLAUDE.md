@@ -28,7 +28,8 @@ Node 20; `~/img2stl-test/repo/tests/node_modules` is a symlink to the gpx2stl te
 - Relief taper: TAPER_STEPS (4) stacked extrusions, each stands on the bed; design mode shrinks
   the design, background mode widens the grooves.
 - Cutter: inner face vertical; the outside steps in over the top BLADE_LENGTH (3 mm) to `tip`.
-  Height is clamped to >= depth + 1.
+  Height 0–5 mm in the UI (engine floor 0.1); the blade is min(3, height - 0.2) so it stops short
+  of the plate. Height <= depth is allowed, with a note. Wall 0.8–1.5 mm.
 - Outline shape fills holes; if the grown design is still in pieces, it uses their convex hull and says so.
 - Cutter along the design (`cutter.along: "design"`): hole = design with holes filled, rim = hole
   grown by the wall (simplified 0.001 mm: offsets of jagged corners left points a hair apart that

@@ -29,9 +29,9 @@ const SLIDERS = {
     { key: "cornerRadius", label: "Corner radius", unit: "mm", min: 0, max: 30, step: 0.5 },
   ],
   "cutter-controls": [
-    { key: "cutterHeight", label: "Cutter height", unit: "mm", min: 2, max: 25, step: 0.5, help: "Above the base. Match your clay slab's thickness, so the edge cuts through as the stamp touches down" },
-    { key: "cutterWall", label: "Wall thickness", unit: "mm", min: 0.8, max: 4, step: 0.1 },
-    { key: "cutterTip", label: "Cutting edge", unit: "mm", min: 0.4, max: 4, step: 0.1, help: "Thickness at the very edge; the wall narrows to it over its top 3 mm. Set it to the wall thickness for a square edge" },
+    { key: "cutterHeight", label: "Cutter height", unit: "mm", min: 0, max: 5, step: 0.1, help: "Above the base. Match your clay slab's thickness, so the edge cuts through as the stamp touches down" },
+    { key: "cutterWall", label: "Wall thickness", unit: "mm", min: 0.8, max: 1.5, step: 0.1 },
+    { key: "cutterTip", label: "Cutting edge", unit: "mm", min: 0.4, max: 1.5, step: 0.1, help: "Thickness at the very edge; the wall narrows to it over its top 3 mm (less on a low cutter). Set it to the wall thickness for a square edge" },
   ],
   "advanced-controls": [
     { key: "taper", label: "Relief taper", unit: "mm", min: 0, max: 1, step: 0.05, help: "How far the relief's sides lean in, so the stamp lets go of the clay cleanly" },
