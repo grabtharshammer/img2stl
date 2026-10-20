@@ -21,6 +21,8 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 - **Impression depth** and **base thickness**, and a slight **taper** on the relief so it lets go of the clay.
 - **Cookie cutter**: a wall round the edge that reaches past the relief and narrows to a sharper
   cutting edge. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
+  It runs round the stamp's edge, or **along the design's outline**: then the piece cut out is the
+  design's own shape and everything inside the outline is impressed.
 - A 3D preview, a 2D preview of how the impression will look, and a watertight binary **STL**.
 - **Shareable settings**: the address bar always holds a link to the current settings (only the
   ones changed from the defaults), so it can be bookmarked or sent; **Copy link** copies it. The image
@@ -46,6 +48,7 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 | Border | 3 mm | Between the design and the edge (or the cutter wall) |
 | Corner radius | 3 mm | Rectangle only |
 | **Cookie cutter** | off | |
+| Cuts along | The stamp's edge | Or *the design's outline*: the wall's inner face is the design's outer edge (holes filled), with no border. Shape and border don't apply; separate pieces each get their own wall, joined by the plate |
 | Cutter height | 6 mm | Above the base; at least the impression depth + 1 mm |
 | Wall thickness | 1.6 mm | |
 | Cutting edge | 0.8 mm | The wall narrows to this over its top 3 mm, on the outside; the inside stays vertical |

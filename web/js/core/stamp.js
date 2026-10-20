@@ -16,9 +16,11 @@ export const DEFAULTS = {
   boldness: 0,           // mm grown (or shrunk) on every edge of the design
   despeckle: 0.5,        // mm²: islands and holes smaller than this are dropped
   taper: 0.2,            // mm the relief's sides lean in over its height, so it lets go of the clay
-  cutter: null,          // { height: mm above the plate, wall: mm, tip: mm at the cutting edge }
+  cutter: null,          // { height: mm above the plate, wall: mm, tip: mm at the cutting edge, along }
 };
-export const CUTTER_DEFAULTS = { height: 6, wall: 1.6, tip: 0.8 };
+// along: "stamp" runs the wall round the stamp's shape; "design" puts its inner face on the
+// design's outer outline, so the cut piece is the design's silhouette (shape and margin are ignored)
+export const CUTTER_DEFAULTS = { height: 6, wall: 1.6, tip: 0.8, along: "stamp" };
 
 const TAPER_STEPS = 4, BLADE_STEPS = 6, BLADE_LENGTH = 3;   // mm of wall that narrows to the tip
 const MIN_FEATURE = 0.4;                                     // mm; about one nozzle line
@@ -39,14 +41,15 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
     const raw = traceLevel(field, nx, ny, 0).map((l) => l.map(([i, j]) => [i, ny - 1 - j]));   // y up
     if (!raw.length) throw new Error("No design found. Try another threshold, or switch between dark and light parts.");
 
-    const wall = o.cutter ? o.cutter.wall : 0, pad = o.margin + wall;
+    const edge = o.cutter?.along === "design", shape = edge ? "outline" : o.shape;
+    const wall = o.cutter ? o.cutter.wall : 0, pad = (edge ? 0 : o.margin) + wall;
     // scale (mm per pixel) that makes the finished stamp o.size across its longest side
     const fit = (polys) => {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of polys) for (const [x, y] of p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       let s;
-      if (o.shape === "circle") {
+      if (shape === "circle") {
         let r = 0;
         for (const p of polys) for (const [x, y] of p) r = Math.max(r, Math.hypot(x - cx, y - cy));
         s = (o.size / 2 - pad - o.boldness) / r;
@@ -80,10 +83,25 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
 
     progress("outline", 0);
     const notes = [];
-    let outline;
-    if (o.shape === "circle") {
+    const filled = (c) => keep(new CrossSection(c.toPolygons().filter((p) => polygonArea(p) > 0), "Positive"));
+    // outline: the whole stamp; rim: the outside of the cutter wall; hole: the open face inside it
+    let outline, rim, hole, inner = null;
+    if (edge) {
+      // the cutter's inner face is the design's outer outline; inner is the background inside it
+      hole = filled(ink);
+      inner = keep(hole.subtract(ink));
+      // offsetting a jagged traced corner leaves points a hair apart, which merge into an open
+      // edge once written as float32; the old shapes never hit this, as the hull smoothed them
+      rim = outline = keep(round(hole, wall).simplify(0.001));
+      const parts = hole.decompose();
+      if (parts.length > 1) {
+        outline = keep(CrossSection.hull([rim]));
+        notes.push("The design is in separate pieces: each gets its own cutting edge, on one plate.");
+      }
+      parts.forEach((p) => p.delete());
+    } else if (shape === "circle") {
       outline = keep(CrossSection.circle(o.size / 2, segments(o.size / 2)));
-    } else if (o.shape === "rect") {
+    } else if (shape === "rect") {
       const b = ink.bounds(), w = b.max[0] - b.min[0] + 2 * pad, h = b.max[1] - b.min[1] + 2 * pad;
       const r = Math.max(0, Math.min(o.cornerRadius, w / 2 - 0.01, h / 2 - 0.01));
       outline = keep(CrossSection.square([w - 2 * r, h - 2 * r], true));
@@ -91,8 +109,7 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
       outline = keep(outline.translate([(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2]));
     } else {
       // follow the design: grow it by the margin and fill in its holes
-      const grown = pad > 0 ? round(ink, pad) : ink;
-      outline = keep(new CrossSection(grown.toPolygons().filter((p) => polygonArea(p) > 0), "Positive"));
+      outline = filled(pad > 0 ? round(ink, pad) : ink);
       const parts = outline.decompose();
       if (parts.length > 1) {
         outline = keep(CrossSection.hull([outline]));
@@ -101,10 +118,16 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
       parts.forEach((p) => p.delete());
     }
 
-    // the open face of the stamp: inside the cutter wall, or (without one) the whole outline
-    const hole = wall ? round(outline, -wall) : outline;
-    const relief = keep(o.raise === "background" ? hole.subtract(ink) : ink.intersect(hole));
-    if (relief.isEmpty()) throw new Error("Nothing to raise: the design fills the whole stamp.");
+    if (!edge) {
+      // the open face of the stamp: inside the cutter wall, or (without one) the whole outline
+      rim = outline;
+      hole = wall ? round(outline, -wall) : outline;
+    }
+    const relief = inner && o.raise === "background" ? inner
+      : keep(o.raise === "background" ? hole.subtract(ink) : ink.intersect(hole));
+    if (relief.isEmpty())
+      throw new Error(edge ? "Nothing to raise: the design has no details inside its outline to stand out."
+                           : "Nothing to raise: the design fills the whole stamp.");
     const opened = round(round(relief, -MIN_FEATURE / 2), MIN_FEATURE / 2);
     if ((relief.area() - opened.area()) / relief.area() > 0.01)
       notes.push(`Some raised details are thinner than ${MIN_FEATURE} mm and may not print cleanly. A little more line boldness helps.`);
@@ -126,18 +149,34 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
       // plate and wall in one piece: a block with the face hollowed out above the plate. The inner
       // face stays vertical, so the cut piece gets clean straight sides; the outside narrows in
       // steps to the tip over the top `blade` mm.
+      // Cutting along the design, everything starts below the bed and is trimmed flat at the end:
+      // the relief runs into the wall, and its bottoms would otherwise lie on the block's.
       const cuts = [prism(hole, o.base, top + 1)];
       for (let k = 1; blade > 0 && k <= BLADE_STEPS; k++) {
         const t = wall - ((wall - tip) * k) / BLADE_STEPS;
-        cuts.push(prism(keep(round(outline, 1 + 0.1 * k).subtract(round(outline, -(wall - t)))),
+        cuts.push(prism(keep(round(rim, 1 + 0.1 * k).subtract(round(rim, -(wall - t)))),
                         top - blade + (blade * (k - 1)) / BLADE_STEPS, top + 1 + 0.1 * k));
       }
-      body = keep(prism(outline, 0, top).subtract(keep(Manifold.union(cuts))));
+      body = keep(prism(rim, edge ? -1 : 0, top).subtract(keep(Manifold.union(cuts))));
+      if (outline !== rim) {
+        // separate pieces: a plate joins their walls. Its edges run inside the walls or cross them,
+        // never along a face (the hull of the walls themselves would touch them tangentially).
+        const join = keep(keep(CrossSection.hull([round(hole, wall / 2)])).subtract(round(hole, wall / 4)));
+        body = keep(Manifold.union([body, prism(join, -1.2, o.base)]));
+      }
     } else {
       body = prism(round(outline, 1), 0, o.base);                   // overshoots; trimmed below
     }
     let raised;
-    if (o.raise === "background") {
+    if (edge && o.raise === "design") {
+      // the design fills the cutter: it runs a little into the wall (further at each step, so no
+      // two steps share a face) and only its inside gaps widen towards the top
+      raised = [];
+      for (let k = 0; k < steps; k++) {
+        const d = (o.taper * k) / steps;
+        raised.push(prism(keep(round(hole, 0.05 * (k + 1)).subtract(d ? round(inner, d) : inner)), -0.5 - 0.1 * k, band(k + 1)));
+      }
+    } else if (o.raise === "background" && !edge) {
       // a raised face with the design cut in as grooves that widen towards the top
       const face = wall ? round(hole, 0.05) : round(outline, 1);    // into the wall, or past the edge
       const grooves = [];
@@ -147,7 +186,8 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
       }
       raised = [keep(prism(face, 0, reliefTop).subtract(keep(Manifold.union(grooves))))];
     } else {
-      // the design itself, its sides leaning in towards the top; each step stands on the bed
+      // the design (or, cutting along the design, the background inside it), its sides leaning in
+      // towards the top; each step stands on the bed
       raised = [];
       for (let k = 0; k < steps; k++) {
         const d = (o.taper * k) / steps, region = d ? round(relief, -d) : relief;
@@ -157,6 +197,7 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
     }
     body = keep(Manifold.union([body, ...raised]));
     if (!o.cutter) body = keep(body.intersect(prism(outline, -1, top + 1)));
+    else if (edge) body = keep(body.intersect(prism(round(outline, 1), 0, top + 1)));
     if (body.status() !== "NoError") throw new Error(`Geometry error: ${body.status()}`);
     progress("solid", 1);
 

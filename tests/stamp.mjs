@@ -26,10 +26,20 @@ function design(nx = 400, ny = 300) {
   return { field, nx, ny };
 }
 const d = design();
+const disc = (() => {           // one piece: a disc with a cross cut into it
+  const nx = 300, ny = 300, lum = new Float32Array(nx * ny).fill(0.95);
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) {
+    const r = Math.hypot(x - 150, y - 150);
+    if (r < 120 && !(r < 80 && (Math.abs(x - 150) < 10 || Math.abs(y - 150) < 10))) lum[y * nx + x] = 0.1;
+  }
+  const thr = otsu(lum), soft = blur(lum, nx, ny, 1), field = new Float32Array(nx * ny);
+  for (let i = 0; i < field.length; i++) field[i] = thr - soft[i];
+  return { field, nx, ny };
+})();
 
-function build(opts, label) {
+function build(opts, label, design = d) {
   const t0 = performance.now();
-  const m = buildStamp(d, opts, { manifold });
+  const m = buildStamp(design, opts, { manifold });
   const s = m.stats, ms = performance.now() - t0;
   console.log(`     ${label}: ${s.width.toFixed(2)} x ${s.depth.toFixed(2)} x ${s.height.toFixed(2)} mm, ` +
               `${s.volume.toFixed(2)} cm³, ${s.triangles} tris, genus ${s.genus}, ${ms.toFixed(0)} ms${s.notes.length ? " · " + s.notes.join(" ") : ""}`);
@@ -67,6 +77,18 @@ check(near(cut.stats.height, 11), "cutter: wall reaches 3 + 8 mm");
 check(near(Math.max(cut.stats.width, cut.stats.depth), 60), "cutter: still 60 mm overall");
 build({ cutter: { height: 8, wall: 1.6, tip: 1.6 }, shape: "rect" }, "cutter, square edge, rect");
 build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter lower than relief (clamped)");
+
+// cutting along the design: the ring and the bar are separate pieces, so two cutting edges on one plate
+const along = { height: 6, wall: 1.6, tip: 0.8, along: "design" };
+const edge = build({ cutter: along }, "cutter along the design");
+check(near(Math.max(edge.stats.width, edge.stats.depth), 60), "along the design: 60 mm overall");
+check(edge.stats.notes.some((n) => /own cutting edge/.test(n)), "along the design: says each piece gets its own edge");
+check(near(edge.stats.design.width + 2 * along.wall, edge.stats.width, 0.05), "along the design: no border, just the wall");
+build({ cutter: along, raise: "background" }, "cutter along the design, background raised");
+build({ cutter: along, raise: "background" }, "along the design, one piece, background raised", disc);
+build({ cutter: { ...along, tip: 1.6 }, taper: 0, shape: "circle", margin: 10 }, "along the design, square edge, no taper (shape ignored)");
+const one = build({ cutter: along }, "along the design, one piece", disc);
+check(!one.stats.notes.some((n) => /own cutting edge/.test(n)), "along the design, one piece: one edge");
 
 const bg = build({ raise: "background" }, "background raised");
 check(bg.stats.volume > base.stats.volume, "background raised: more material than design raised");

@@ -30,6 +30,13 @@ Node 20; `~/img2stl-test/repo/tests/node_modules` is a symlink to the gpx2stl te
 - Cutter: inner face vertical; the outside steps in over the top BLADE_LENGTH (3 mm) to `tip`.
   Height is clamped to >= depth + 1.
 - Outline shape fills holes; if the grown design is still in pieces, it uses their convex hull and says so.
+- Cutter along the design (`cutter.along: "design"`): hole = design with holes filled, rim = hole
+  grown by the wall (simplified 0.001 mm: offsets of jagged corners left points a hair apart that
+  became open edges as float32), `inner` = background inside. Design mode raises hole + 0.05*(k+1)
+  minus the widening `inner` (runs into the wall); background mode raises `inner` like a design.
+  Everything starts below z=0 and is trimmed flat at the end (coplanar bottoms left open edges).
+  Separate pieces: walls carved per piece, joined by a plate = hull(hole + wall/2) - (hole + wall/4),
+  whose edges cross the walls; carving between pieces from a hull block left tangent slivers.
 - Thin-feature note: relief area lost to a 0.4 mm morphological opening > 1%.
 
 ## Performance

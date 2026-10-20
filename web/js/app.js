@@ -42,7 +42,7 @@ const UI_DEFAULTS = {
   mirror: DEFAULTS.mirror, raise: DEFAULTS.raise, shape: DEFAULTS.shape, size: DEFAULTS.size, depth: DEFAULTS.depth,
   base: DEFAULTS.base, margin: DEFAULTS.margin, cornerRadius: DEFAULTS.cornerRadius,
   cutterOn: false, cutterHeight: CUTTER_DEFAULTS.height, cutterWall: CUTTER_DEFAULTS.wall, cutterTip: CUTTER_DEFAULTS.tip,
-  cell: 0.1, taper: DEFAULTS.taper,
+  cutterAlong: CUTTER_DEFAULTS.along, cell: 0.1, taper: DEFAULTS.taper,
 };
 
 // what may come in through the URL; choices are read from the buttons, so they can't drift apart
@@ -51,7 +51,7 @@ const URL_SCHEMA = {
   ...Object.fromEntries(Object.values(SLIDERS).flat().map((d) => [d.key, { type: "number", min: d.min, max: d.max * 4 }])),
   ink: { type: "enum", values: choices("ink") }, thresholdAuto: { type: "bool" }, mirror: { type: "bool" },
   raise: { type: "enum", values: choices("raise") }, shape: { type: "enum", values: choices("shape") },
-  cutterOn: { type: "bool" }, cell: { type: "enum", values: choices("detail", parseFloat) },
+  cutterOn: { type: "bool" }, cutterAlong: { type: "enum", values: choices("cutter-along") }, cell: { type: "enum", values: choices("detail", parseFloat) },
 };
 
 // a link's settings win over the ones saved in this browser; keys the link leaves out are defaults
@@ -69,8 +69,10 @@ const engineOpts = () => ({
   size: settings.size, depth: settings.depth, base: settings.base, margin: settings.margin, shape: settings.shape,
   cornerRadius: settings.cornerRadius, mirror: settings.mirror, raise: settings.raise, boldness: settings.boldness,
   despeckle: settings.despeckle, taper: settings.taper,
-  cutter: settings.cutterOn ? { height: settings.cutterHeight, wall: settings.cutterWall, tip: settings.cutterTip } : null,
+  cutter: settings.cutterOn ? { height: settings.cutterHeight, wall: settings.cutterWall, tip: settings.cutterTip, along: settings.cutterAlong } : null,
 });
+// the cutter follows the design's outline: shape and border don't apply, and the outside is cut away
+const alongDesign = () => settings.cutterOn && settings.cutterAlong === "design";
 
 // Touch screens: a native range input takes any touch that lands on it, so scrolling the page
 // past a slider nudges it, and a tap on the track jumps the value. There, the input ignores
@@ -114,6 +116,7 @@ for (const [container, defs] of Object.entries(SLIDERS)) {
   for (const d of defs) {
     const el = document.createElement("div");
     el.className = "field";
+    el.id = `f-${d.key}`;
     el.innerHTML = `
       <label class="label" for="r-${d.key}">${d.label}</label>
       <div class="slide"><span class="range"><input type="range" id="r-${d.key}" min="${d.min}" max="${d.max}" step="${d.step}"></span>
@@ -151,7 +154,7 @@ function bindCheck(id, key) {
   return () => { $(id).checked = settings[key]; };
 }
 const syncs = [bindSeg("ink", "ink"), bindSeg("raise", "raise"), bindSeg("shape", "shape"), bindSeg("detail", "cell", parseFloat),
-               bindCheck("mirror", "mirror"), bindCheck("cutter-on", "cutterOn")];
+               bindSeg("cutter-along", "cutterAlong"), bindCheck("mirror", "mirror"), bindCheck("cutter-on", "cutterOn")];
 
 function syncControls() {
   for (const [k, set] of Object.entries(inputs)) set(settings[k]);
@@ -272,8 +275,8 @@ const threshold = () => (settings.thresholdAuto && preview ? preview.auto : sett
 // mm across the design's longest side, as the stamp will be built (the engine works it out exactly)
 function designLong() {
   const bw = bounds.x1 - bounds.x0 + 1, bh = bounds.y1 - bounds.y0 + 1;
-  let L = settings.size - 2 * (settings.margin + (settings.cutterOn ? settings.cutterWall : 0) + settings.boldness);
-  if (settings.shape === "circle") L *= Math.max(bw, bh) / Math.hypot(bw, bh);
+  let L = settings.size - 2 * ((alongDesign() ? 0 : settings.margin) + (settings.cutterOn ? settings.cutterWall : 0) + settings.boldness);
+  if (settings.shape === "circle" && !alongDesign()) L *= Math.max(bw, bh) / Math.hypot(bw, bh);
   return L;
 }
 
@@ -295,19 +298,41 @@ function drawPreview() {
   // pressed-in parts are shaded deep; the stamp is mirrored, so the clay shows the image as it
   // is (or reversed when the stamp isn't)
   const deep = rgb("--clay-deep"), surface = rgb("--clay"), pressed = settings.raise === "design";
+  const ink = new Uint8Array(cw * ch);
   for (let y = 0; y < ch; y++)
     for (let x = 0; x < cw; x++) {
-      const sx = settings.mirror ? x0 + x : x1 - 1 - x, v = soft[(y0 + y) * w + sx];
-      const ink = inkDark ? v < t : v > t, col = ink === pressed ? deep : surface, p = (y * cw + x) * 4;
-      img.data[p] = col[0]; img.data[p + 1] = col[1]; img.data[p + 2] = col[2]; img.data[p + 3] = 255;
+      const v = soft[(y0 + y) * w + (settings.mirror ? x0 + x : x1 - 1 - x)];
+      ink[y * cw + x] = inkDark ? v < t : v > t;
     }
+  const out = alongDesign() ? outside(ink, cw, ch) : null;   // cut away: left transparent
+  for (let i = 0; i < ink.length; i++) {
+    const col = ink[i] === +pressed ? deep : surface, p = i * 4;
+    img.data[p] = col[0]; img.data[p + 1] = col[1]; img.data[p + 2] = col[2]; img.data[p + 3] = out?.[i] ? 0 : 255;
+  }
   ctx.putImageData(img, 0, 0);
+}
+
+// background pixels connected to the crop's border: what a cutter along the design cuts away
+function outside(ink, w, h) {
+  const out = new Uint8Array(w * h), stack = [];
+  const push = (i) => { if (!ink[i] && !out[i]) { out[i] = 1; stack.push(i); } };
+  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+  while (stack.length) {
+    const i = stack.pop(), x = i % w;
+    if (x > 0) push(i - 1);
+    if (x < w - 1) push(i + 1);
+    if (i >= w) push(i - w);
+    if (i < w * (h - 1)) push(i + w);
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------ state
 function changed() {
   save();
-  $("corner-controls").hidden = settings.shape !== "rect";
+  $("corner-controls").hidden = settings.shape !== "rect" || alongDesign();
+  $("shape-field").hidden = $("f-margin").hidden = alongDesign();
   $("cutter-body").hidden = !settings.cutterOn;
   if (settings.thresholdAuto && preview) inputs.threshold(Math.round(preview.auto * 100));
   $("threshold-note").innerHTML = settings.thresholdAuto
