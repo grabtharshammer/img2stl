@@ -76,6 +76,15 @@ const cut = build({ cutter: { height: 8, wall: 1.6, tip: 0.8 } }, "cutter");
 check(near(cut.stats.height, 11), "cutter: wall reaches 3 + 8 mm");
 check(near(Math.max(cut.stats.width, cut.stats.depth), 60), "cutter: still 60 mm overall");
 build({ cutter: { height: 8, wall: 1.6, tip: 1.6 }, shape: "rect" }, "cutter, square edge, rect");
+// the cutting edge is tip thick all the way up: everything above the plate sits wall - tip inside the plate's edge
+const edgeOn = build({ cutter: { height: 5, wall: 1.5, tip: 0.6 }, shape: "rect", size: 50 }, "cutter, straight thin edge, rect");
+const widthAbove = (m, z) => {
+  let x0 = Infinity, x1 = -Infinity;
+  for (let i = 0; i < m.positions.length; i += 3) if (m.positions[i + 2] > z) { x0 = Math.min(x0, m.positions[i]); x1 = Math.max(x1, m.positions[i]); }
+  return x1 - x0;
+};
+check(near(widthAbove(edgeOn, 3.01), 50 - 2 * 0.9) && near(widthAbove(edgeOn, 7.9), 50 - 2 * 0.9),
+      "straight edge: 0.9 mm in from the plate's edge just above the plate and at the top");
 const low = build({ cutter: { height: 2, wall: 1.2, tip: 0.6 }, shape: "circle", depth: 3 }, "cutter lower than relief");
 check(near(low.stats.height, 6) && low.stats.notes.some((n) => /before the cutting edge/.test(n)), "cutter lower than relief: 3 + 3 mm tall, with a note");
 build({ cutter: { height: 0.3, wall: 1.5, tip: 0.4 } }, "cutter 0.3 mm");

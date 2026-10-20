@@ -16,13 +16,13 @@ export const DEFAULTS = {
   boldness: 0,           // mm grown (or shrunk) on every edge of the design
   despeckle: 0.5,        // mm²: islands and holes smaller than this are dropped
   taper: 0.2,            // mm the relief's sides lean in over its height, so it lets go of the clay
-  cutter: null,          // { height: mm above the plate, wall: mm, tip: mm at the cutting edge, along }
+  cutter: null,          // { height: mm above the plate, wall: mm at the plate, tip: mm all the way up, along }
 };
 // along: "stamp" runs the wall round the stamp's shape; "design" puts its inner face on the
 // design's outer outline, so the cut piece is the design's silhouette (shape and margin are ignored)
 export const CUTTER_DEFAULTS = { height: 4, wall: 1.5, tip: 0.8, along: "stamp" };
 
-const TAPER_STEPS = 4, BLADE_STEPS = 6, BLADE_LENGTH = 3;   // mm of wall that narrows to the tip
+const TAPER_STEPS = 4;
 const MIN_FEATURE = 0.4;                                     // mm; about one nozzle line
 const segments = (r) => Math.min(360, Math.max(24, Math.round((2 * Math.PI * Math.abs(r)) / 0.25)));
 
@@ -144,27 +144,23 @@ export function buildStamp({ field, nx, ny }, options, { manifold, progress = ()
     if (o.cutter) {
       const height = Math.max(o.cutter.height, 0.1);            // a wall flush with the plate is no wall
       const tip = Math.min(o.cutter.tip, wall);
-      const blade = tip < wall ? Math.min(BLADE_LENGTH, height - 0.2) : 0;   // stops short of the plate
       if (height <= o.depth)
         notes.push("The relief stands as tall as the cutter or taller, so it reaches the clay before the cutting edge does.");
       top = o.base + height;
-      // plate and wall in one piece: a block with the face hollowed out above the plate. The inner
-      // face stays vertical, so the cut piece gets clean straight sides; the outside narrows in
-      // steps to the tip over the top `blade` mm.
+      // plate and wall in one piece: a block with the face hollowed out above the plate. Above the
+      // plate the wall is the tip's thickness all the way up, straight on both sides, for a clean
+      // straight cut; at the plate it widens out to the full wall.
       // Cutting along the design, everything starts below the bed and is trimmed flat at the end:
       // the relief runs into the wall, and its bottoms would otherwise lie on the block's.
       const cuts = [prism(hole, o.base, top + 1)];
-      for (let k = 1; blade > 0 && k <= BLADE_STEPS; k++) {
-        const t = wall - ((wall - tip) * k) / BLADE_STEPS;
-        cuts.push(prism(keep(round(rim, 1 + 0.1 * k).subtract(round(rim, -(wall - t)))),
-                        top - blade + (blade * (k - 1)) / BLADE_STEPS, top + 1 + 0.1 * k));
-      }
+      if (tip < wall) cuts.push(prism(keep(round(rim, 1).subtract(round(rim, -(wall - tip)))), o.base, top + 1));
       body = keep(prism(rim, edge ? -1 : 0, top).subtract(keep(Manifold.union(cuts))));
       if (outline !== rim) {
         // separate pieces: a plate joins their walls. Its edges run inside the walls or cross them,
-        // never along a face (the hull of the walls themselves would touch them tangentially).
+        // never along a face (the hull of the walls themselves would touch them tangentially). Its
+        // top is 0.01 mm under the wall's shoulder, which it would otherwise lie on.
         const join = keep(keep(CrossSection.hull([round(hole, wall / 2)])).subtract(round(hole, wall / 4)));
-        body = keep(Manifold.union([body, prism(join, -1.2, o.base)]));
+        body = keep(Manifold.union([body, prism(join, -1.2, o.base - 0.01)]));
       }
     } else {
       body = prism(round(outline, 1), 0, o.base);                   // overshoots; trimmed below

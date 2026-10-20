@@ -19,8 +19,8 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
   background is raised, so the design stands up in the clay).
 - Stamp shape: follows the design's **outline**, or a **rectangle** or **circle**.
 - **Impression depth** and **base thickness**, and a slight **taper** on the relief so it lets go of the clay.
-- **Cookie cutter**: a wall round the edge that reaches past the relief and narrows to a sharper
-  cutting edge. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
+- **Cookie cutter**: a wall round the edge, a thin straight cutting edge for its whole height above
+  the plate, widening to a sturdier wall where it meets the plate. Set its height to your clay slab's thickness: the edge cuts through as the stamp touches down.
   It runs round the stamp's edge, or **along the design's outline**: then the piece cut out is the
   design's own shape and everything inside the outline is impressed.
 - A 3D preview, a 2D preview of how the impression will look, and a watertight binary **STL**.
@@ -50,8 +50,8 @@ Everything runs in your browser; your image is never uploaded anywhere. It's a s
 | **Cookie cutter** | off | |
 | Cuts along | The stamp's edge | Or *the design's outline*: the wall's inner face is the design's outer edge (holes filled), with no border. Shape and border don't apply; separate pieces each get their own wall, joined by the plate |
 | Cutter height | 4 mm | Above the base, 0–5 mm in 0.1 mm steps. Below the impression depth, the relief reaches the clay first (the app says so) |
-| Wall thickness | 1.5 mm | 0.8–1.5 mm |
-| Cutting edge | 0.8 mm | The wall narrows to this over its top 3 mm (all but the bottom 0.2 mm of a lower cutter), on the outside; the inside stays vertical |
+| Wall thickness | 1.5 mm | 0.8–1.5 mm, where the wall meets the plate |
+| Cutting edge | 0.8 mm | The wall's thickness for its whole height above the plate, straight on both sides; the outside steps out to the wall thickness at the plate |
 | **Advanced** | | |
 | Detail | Standard | Tracing resolution: 0.2, 0.1 or 0.05 mm per pixel |
 | Relief taper | 0.2 mm | How far the relief's sides lean in over its height |
